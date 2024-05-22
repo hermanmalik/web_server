@@ -1,0 +1,9 @@
+# Define required macros here
+SHELL = /bin/sh
+
+OBJS =  main.o
+CFLAGS = -Wall -g
+CC = gcc
+
+main: main.cpp
+   $(CC) $(CFLAGS) -o $@
