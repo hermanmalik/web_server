@@ -6,6 +6,7 @@ int main(int argc, char *argv[]) {
     try {
         start_webserver(port);
     } catch (...) {
+        printf("server error");
         return 1;
     }
 }

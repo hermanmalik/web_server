@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+// method, URI, version, headers, body
 struct http_request {
     std::string method;
     std::string URI;
@@ -13,6 +14,7 @@ struct http_request {
     std::string body;
 };
 
+// version, status+reason, headers, body
 struct http_response {
     std::string version;
     std::string status; // status and reason together

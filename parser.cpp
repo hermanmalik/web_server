@@ -36,6 +36,7 @@ http_request parseRequest(std::string request, int len) {
         if (end == std::string::npos)
             break;
         std::string line = request.substr(pos, end - pos);
+        // std::cout << line;
         pos = end + 2;  // Move past the "\r\n"
 
         // Check if it's the first line (request line)
@@ -43,11 +44,13 @@ http_request parseRequest(std::string request, int len) {
             // Parse the request line
             size_t methodEnd = line.find(' ');
             if (methodEnd == std::string::npos) {
+                printf("method");
                 throw std::invalid_argument("Invalid request line format");
             }
             out.method = line.substr(0, methodEnd);
             size_t pathEnd = line.find(' ', methodEnd + 1);
             if (pathEnd == std::string::npos) {
+                printf("URI");
                 throw std::invalid_argument("Invalid request line format");
             }
             out.URI = line.substr(methodEnd + 1, pathEnd - methodEnd - 1);
@@ -60,7 +63,7 @@ http_request parseRequest(std::string request, int len) {
                 std::string headerValue = line.substr(colonPos + 2);  // Skip ': ' after the colon
                 out.headers.emplace_back(headerName, headerValue);
             } else {
-                throw std::invalid_argument("Invalid header format");
+                break; 
             }
         }
     }
