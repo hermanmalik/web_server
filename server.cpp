@@ -23,7 +23,7 @@
 // #pragma comment (lib, "Mswsock.lib")
 
 #define DEFAULT_BUFLEN 512
-#define DEFAULT_PORT "27016"
+#define DEFAULT_PORT "80"
 
 int __cdecl main(int argc, char *argv[])
 {
@@ -54,8 +54,11 @@ int __cdecl main(int argc, char *argv[])
     hints.ai_flags = AI_PASSIVE;
 
     // Resolve the local address and port to be used by the server
-    if (argc < 2) iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-    else iResult = getaddrinfo(NULL, argv[1], &hints, &result);
+    // if (argc < 2) iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
+    // else iResult = getaddrinfo(NULL, argv[1], &hints, &result);
+    char const * port = DEFAULT_PORT;
+    if (argc > 1) port = argv[1];
+    iResult = getaddrinfo(NULL, port, &hints, &result);
     if (iResult != 0) {
         printf("getaddrinfo failed: %d\n", iResult);
         WSACleanup();
@@ -73,7 +76,7 @@ int __cdecl main(int argc, char *argv[])
 
     // Now to accept client connections, the socket must be bound to a network address within the system
     // Setup the TCP listening socket
-    printf("Binding...\n");
+    printf("Binding to port %s...\n", port);
     iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
     if (iResult == SOCKET_ERROR) {
         printf("bind failed with error: %d\n", WSAGetLastError());
@@ -119,7 +122,7 @@ int __cdecl main(int argc, char *argv[])
             // Echo the buffer back to the sender
             std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> hi </h1><p> hi losers :) </p></body></html>";
             std::ostringstream ss;
-            ss << "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: " << htmlFile.size() << "\n\n" << htmlFile;
+            ss << "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-Length: " << htmlFile.size() << "\n\n" << htmlFile;
             std::string htmlOutput = ss.str();
             int bytesSent;
             long totalBytesSent = 0;

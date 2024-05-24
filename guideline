@@ -1,3 +1,19 @@
+=====================
+TODO
+=====================
+- implement multiple connections (using fork?)
+- parse http headers
+- allow to serve more content
+- logging in a text file
+- 
+
+
+
+
+=====================
+GUIDE
+=====================
+
 taken from https://www.reddit.com/r/C_Programming/comments/kbfa6t/comment/gfh8kid/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
 
 also following https://learn.microsoft.com/en-us/windows/win32/winsock/
