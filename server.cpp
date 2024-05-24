@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <iostream>
+#include "parser.h"
 
 
 // Need to link with Ws2_32.lib
@@ -25,7 +26,8 @@
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "80"
 
-int __cdecl main(int argc, char *argv[])
+// Starts a http server on the given port
+void __cdecl start_webserver(char const * port)
 {
     WSADATA wsaData; // contains socket's implementation info
     int iResult;
@@ -44,7 +46,7 @@ int __cdecl main(int argc, char *argv[])
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData); // initiates use of WS2_32.dll
     if (iResult != 0) {
         printf("WSAStartup failed: %d\n", iResult);
-        return 1;
+        throw std::exception();
     }
 
     ZeroMemory(&hints, sizeof (hints));
@@ -56,13 +58,12 @@ int __cdecl main(int argc, char *argv[])
     // Resolve the local address and port to be used by the server
     // if (argc < 2) iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
     // else iResult = getaddrinfo(NULL, argv[1], &hints, &result);
-    char const * port = DEFAULT_PORT;
-    if (argc > 1) port = argv[1];
+    if (port == NULL) port = DEFAULT_PORT;
     iResult = getaddrinfo(NULL, port, &hints, &result);
     if (iResult != 0) {
-        printf("getaddrinfo failed: %d\n", iResult);
+        printf("getaddrinfo failed on port %s: %d\n", port, iResult);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
     
     // Call the socket function and return its value to the ListenSocket variable
@@ -71,7 +72,7 @@ int __cdecl main(int argc, char *argv[])
         printf("Error at socket(): %ld\n", WSAGetLastError());
         freeaddrinfo(result);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
 
     // Now to accept client connections, the socket must be bound to a network address within the system
@@ -83,7 +84,7 @@ int __cdecl main(int argc, char *argv[])
         freeaddrinfo(result);
         closesocket(ListenSocket);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
     // printf("address: %d\n", getsockname(ListenSocket, result->ai_addr, (int *)&result->ai_addrlen));
 
@@ -96,7 +97,7 @@ int __cdecl main(int argc, char *argv[])
         printf( "Listen failed with error: %ld\n", WSAGetLastError() );
         closesocket(ListenSocket);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
 
     // If we get a request, we need to accept it. 
@@ -107,7 +108,7 @@ int __cdecl main(int argc, char *argv[])
         printf("accept failed: %d\n", WSAGetLastError());
         closesocket(ListenSocket);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
     // (here is where you would pass the accepted client socket to a worker thread)
     
@@ -117,9 +118,10 @@ int __cdecl main(int argc, char *argv[])
     do {
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
+            // Print what was received
             printf("Bytes received: %d\n", iResult);
+            printf("%s\n", recvbuf);
 
-            // Echo the buffer back to the sender
             std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> hi </h1><p> hi losers :) </p></body></html>";
             std::ostringstream ss;
             ss << "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-Length: " << htmlFile.size() << "\n\n" << htmlFile;
@@ -140,15 +142,14 @@ int __cdecl main(int argc, char *argv[])
             //     totalBytesSent += bytesSent;
             // }
 
+            // Send back our dummy HTML
             iSendResult = send(ClientSocket, htmlOutput.c_str(), htmlOutput.size(), 0);
-            
 
-            // iSendResult = send(ClientSocket, recvbuf, iResult, 0);
             if (iSendResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
                 closesocket(ClientSocket);
                 WSACleanup();
-                return 1;
+                throw std::exception();
             }
             printf("Bytes sent: %d\n", iSendResult);
         } else if (iResult == 0)
@@ -157,7 +158,7 @@ int __cdecl main(int argc, char *argv[])
             printf("recv failed: %d\n", WSAGetLastError());
             closesocket(ClientSocket);
             WSACleanup();
-            return 1;
+            throw std::exception();
         }
 
     } while (iResult > 0);
@@ -168,7 +169,7 @@ int __cdecl main(int argc, char *argv[])
         printf("shutdown failed: %d\n", WSAGetLastError());
         closesocket(ClientSocket);
         WSACleanup();
-        return 1;
+        throw std::exception();
     }
     // When the client application is done receiving data, we close the socket and free resources.
     closesocket(ClientSocket);
@@ -176,5 +177,4 @@ int __cdecl main(int argc, char *argv[])
 
     // need to implement continuing to work after client leaves
 
-    return 0;
 }
