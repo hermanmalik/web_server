@@ -1,4 +1,4 @@
-#include "server.h"
+#include "src/server.h"
 
 int main(int argc, char *argv[]) {
     char const * port = NULL;

@@ -1,9 +1,13 @@
 
+#define WIN32_LEAN_AND_MEAN
+
 // #include <stdlib.h>
 // #include <stdio.h>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <Windows.h>
+#include <algorithm>
 // #include <cstring>
 // #include <cstdlib>
 // #include <sstream>
@@ -109,4 +113,83 @@ bool validateRequest(http_request request) {
          && request.version != "HTTP/1.1" && request.version != "HTTP/2"
          && request.version != "HTTP/3") return 0;
     return 1;
+}
+
+// Takes a URI and returns a filepath
+std::string parseURI(std::string URI) {
+    // we assume all URIs are filepaths
+    std::string processedURL = URI;
+
+    // need to validate path and make sure it looks normal
+    // process URL
+        // find the first disallowed character (probably ? or #) and cut out anything after it  
+        // first strip out any disallowed characters, including double periods and periods not in the last / section
+        // strip leading slash
+        // prepend root/
+    // if the a folder was requested, look for an index.html file and serve that. 
+    // else strip trailing slash and move on
+    // if the requested file exists, serve it
+    // else, look in the folder above for a txt, html, or other allowed filetype with the requested name and serve that
+    
+
+    // Find the first character which is not a letter, number, _, /, ., -, or space, and cut out anything after it
+    size_t pos = processedURL.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_/.- ");
+    if (pos != std::string::npos) {
+        processedURL = processedURL.substr(0, pos);
+    }
+
+    // Strip out any double periods, periods before the last /, and double slashes
+    size_t doublePeriod = processedURL.find("..");
+    while (doublePeriod != std::string::npos) {
+        processedURL.erase(doublePeriod, 1);
+        doublePeriod = processedURL.find("..");
+    }
+
+    size_t periodBeforeSlash = processedURL.find_last_of(".", processedURL.find_last_of("/") - 1);
+    if (periodBeforeSlash != std::string::npos) {
+        processedURL.erase(0, periodBeforeSlash);
+    }
+
+    std::replace(processedURL.begin(), processedURL.end(), "//", "/");
+    std::string::iterator new_end = std::unique(processedURL.begin(), processedURL.end(),
+        [](char lhs, char rhs) { return (lhs == rhs) && (lhs == '/'); }
+    );
+    processedURL.erase(new_end, processedURL.end());
+
+    // Strip leading slash
+    if (!processedURL.empty() && processedURL[0] == '/') {
+        processedURL.erase(0, 1);
+    }
+    
+    // Prepend root/
+    processedURL = "root/" + processedURL;
+
+    std::cout << processedURL; // for debugging
+
+    // If the path ends with a slash, try to find index.html
+    if (processedURL.back() == '/') {
+        // if index.html exists serve that
+        if (GetFileAttributesA((processedURL + "index.html").c_str()) != INVALID_FILE_ATTRIBUTES) {
+            return processedURL + "index.html";
+        }
+        // else remove the trailing slash
+        processedURL = processedURL.substr(0, processedURL.length() - 1);
+    }
+    
+    // if the requested file exists, serve it
+    if(GetFileAttributes(processedURL))
+    
+    // else, look in the folder above for a txt, html, or other allowed 
+
+    // If the file doesn't exist, try looking in the parent directory for allowed filetypes
+    fs::path parentPath = fs::path(processedURL).parent_path();
+    for (const auto& entry : fs::directory_iterator(parentPath)) {
+        std::string filename = entry.path().filename().string();
+        if (filename == path + ".txt" || filename == path + ".html") {
+            return entry.path().string();
+        }
+    }
+
+    return ""; // File not found
+
 }

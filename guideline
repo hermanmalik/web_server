@@ -5,7 +5,7 @@ TODO
 - parse http headers
 - allow to serve more content
 - logging in a text file
-- 
+- fix parsing to allow blank URIs
 
 
 
