@@ -45,9 +45,36 @@ http_response handle_request(http_request request) {
 
     // HEAD support
     else if (request.method == "HEAD") {    
-        status = "200 OK";
-        body = "";
+        std::string processedURL = parseURI(request.URI);
+        // if empty, return 404
+        if (processedURL.empty()) {
+            status = "404 Not Found";
+            // todo check if 404 file exists
+            // if (GetFileAttributesA("root\\404.html") != INVALID_FILE_ATTRIBUTES) {
+            //     return "root\\404.html";
+            // }
+            body = "<!DOCTYPE html><html lang=\"en\"><body><h1> 404 Not Found </h1></body></html>";
+        }
+        // else if forbidden, return 403
+        else if (false) {
+            status = "403 Forbidden";
+            body = "<!DOCTYPE html><html lang=\"en\"><body><h1> 403 Forbidden </h1></body></html>";
+        }
+        // else return 200 and serve content
+        else {
+            status = "200 OK";
+            std::ifstream ifs(processedURL);
+            body.assign( (std::istreambuf_iterator<char>(ifs) ),
+                (std::istreambuf_iterator<char>()    ) );;
+        }
     }
+    
+    else if (request.method == "POST" || request.method == "PUT" || request.method == "DELETE" 
+        || request.method == "CONNECT" || request.method == "OPTIONS" 
+        || request.method == "TRACE" || request.method == "PATCH") {
+        status = "501 Not Implemented";
+        body = "<!DOCTYPE html><html lang=\"en\"><body><h1> 501 Not Implemented </h1></body></html>";
+    } 
 
     else {
         status = "500 Internal Server Error";

@@ -111,7 +111,9 @@ std::string responseToString(http_response response) {
 bool validateRequest(http_request request) {
     // std::string supported_methods[] = {"GET", "HEAD"};
     // std::string supported_versions[] = {"HTTP/0.9","HTTP/1.0","HTTP/1.1","HTTP/2", "HTTP/3"};
-    if (request.method != "GET" && request.method != "HEAD") return 0;
+    if (request.method != "GET" && request.method != "HEAD" && request.method != "POST" 
+        && request.method != "PUT" && request.method != "DELETE" && request.method != "CONNECT" 
+        && request.method != "OPTIONS" && request.method != "TRACE" && request.method != "PATCH") return 0;
     if (request.version != "HTTP/0.9" && request.version != "HTTP/1.0"
          && request.version != "HTTP/1.1" && request.version != "HTTP/2"
          && request.version != "HTTP/3") return 0;
@@ -183,14 +185,14 @@ std::string parseURI(std::string URI) {
     
     // if the requested file exists, serve it
     if (GetFileAttributesA(processedURL.c_str()) != INVALID_FILE_ATTRIBUTES) {
-        return processedURL;
+        // NEED TO CHECK IF IT IS FOLDER AND RETURN 403 
     }
 
     // else, look in the folder above for a txt, html, or other allowed 
-    if (GetFileAttributesA((processedURL+".html").c_str()) != INVALID_FILE_ATTRIBUTES) {
+    else if (GetFileAttributesA((processedURL+".html").c_str()) != INVALID_FILE_ATTRIBUTES) {
         return processedURL+".html";
     }
-    if (GetFileAttributesA((processedURL+".txt").c_str()) != INVALID_FILE_ATTRIBUTES) {
+    else if (GetFileAttributesA((processedURL+".txt").c_str()) != INVALID_FILE_ATTRIBUTES) {
         return processedURL+".txt";
     }
 
@@ -200,7 +202,9 @@ std::string parseURI(std::string URI) {
     // }
 
     // File not found
-    processedURL = "";
+    else processedURL = "";
+
+    // if (DEBUG) std::cout << "processed URL: " << processedURL << "\n";
 
     return processedURL;
 
