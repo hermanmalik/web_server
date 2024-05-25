@@ -8,11 +8,14 @@
 #include <vector>
 #include <Windows.h>
 #include <algorithm>
+// #include <cctype> // for tolower
 // #include <cstring>
 // #include <cstdlib>
 // #include <sstream>
 // #include <iostream>
 
+#define ROOT_DIR "root/"
+#define DEBUG 1
 
 struct http_request {
     std::string method;
@@ -48,13 +51,13 @@ http_request parseRequest(std::string request, int len) {
             // Parse the request line
             size_t methodEnd = line.find(' ');
             if (methodEnd == std::string::npos) {
-                printf("method");
+                if(DEBUG) printf("Method parsing error");
                 throw std::invalid_argument("Invalid request line format");
             }
             out.method = line.substr(0, methodEnd);
             size_t pathEnd = line.find(' ', methodEnd + 1);
             if (pathEnd == std::string::npos) {
-                printf("URI");
+                if(DEBUG) printf("URI parsing error");
                 throw std::invalid_argument("Invalid request line format");
             }
             out.URI = line.substr(methodEnd + 1, pathEnd - methodEnd - 1);
@@ -118,19 +121,7 @@ bool validateRequest(http_request request) {
 // Takes a URI and returns a filepath
 std::string parseURI(std::string URI) {
     // we assume all URIs are filepaths
-    std::string processedURL = URI;
-
-    // need to validate path and make sure it looks normal
-    // process URL
-        // find the first disallowed character (probably ? or #) and cut out anything after it  
-        // first strip out any disallowed characters, including double periods and periods not in the last / section
-        // strip leading slash
-        // prepend root/
-    // if the a folder was requested, look for an index.html file and serve that. 
-    // else strip trailing slash and move on
-    // if the requested file exists, serve it
-    // else, look in the folder above for a txt, html, or other allowed filetype with the requested name and serve that
-    
+    std::string processedURL = URI;    
 
     // Find the first character which is not a letter, number, _, /, ., -, or space, and cut out anything after it
     size_t pos = processedURL.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_/.- ");
@@ -144,17 +135,25 @@ std::string parseURI(std::string URI) {
         processedURL.erase(doublePeriod, 1);
         doublePeriod = processedURL.find("..");
     }
-
-    size_t periodBeforeSlash = processedURL.find_last_of(".", processedURL.find_last_of("/") - 1);
-    if (periodBeforeSlash != std::string::npos) {
-        processedURL.erase(0, periodBeforeSlash);
+    
+    size_t doubleSlash = processedURL.find("//");
+    while (doubleSlash != std::string::npos) {
+        processedURL.replace(doubleSlash, 2, "/");
+        doubleSlash = processedURL.find("//");
     }
+    // alternative double slash removal - is it equivalent?
+    // std::string::iterator new_end = std::unique(processedURL.begin(), processedURL.end(),
+    //     [](char lhs, char rhs) { return (lhs == rhs) && (lhs == '/'); }
+    // );
+    // processedURL.erase(new_end, processedURL.end());
 
-    std::replace(processedURL.begin(), processedURL.end(), "//", "/");
-    std::string::iterator new_end = std::unique(processedURL.begin(), processedURL.end(),
-        [](char lhs, char rhs) { return (lhs == rhs) && (lhs == '/'); }
-    );
-    processedURL.erase(new_end, processedURL.end());
+    if (processedURL.find_last_of("/") > 0) {
+        size_t periodBeforeSlash = processedURL.find_last_of(".", processedURL.find_last_of("/") - 1);
+        while (periodBeforeSlash != std::string::npos) {
+            processedURL.erase(0, periodBeforeSlash);
+            periodBeforeSlash = processedURL.find_last_of(".", processedURL.find_last_of("/") - 1);
+        }
+    }
 
     // Strip leading slash
     if (!processedURL.empty() && processedURL[0] == '/') {
@@ -162,12 +161,18 @@ std::string parseURI(std::string URI) {
     }
     
     // Prepend root/
-    processedURL = "root/" + processedURL;
+    processedURL = ROOT_DIR + processedURL;
 
-    std::cout << processedURL; // for debugging
+    // Turn all '/'s into '\'s
+    std::replace(processedURL.begin(), processedURL.end(), '/', '\\');
+
+    // TODO DEAL WITH CASE SENSITIVITY 
+    // std::transform(processedURL.begin(), processedURL.end(), processedURL.begin(), std::tolower);
+
+    // if (DEBUG) std::cout << "stripped URL: " << processedURL << "\n";
 
     // If the path ends with a slash, try to find index.html
-    if (processedURL.back() == '/') {
+    if (processedURL.back() == '\\') {
         // if index.html exists serve that
         if (GetFileAttributesA((processedURL + "index.html").c_str()) != INVALID_FILE_ATTRIBUTES) {
             return processedURL + "index.html";
@@ -177,19 +182,26 @@ std::string parseURI(std::string URI) {
     }
     
     // if the requested file exists, serve it
-    if(GetFileAttributes(processedURL))
-    
-    // else, look in the folder above for a txt, html, or other allowed 
-
-    // If the file doesn't exist, try looking in the parent directory for allowed filetypes
-    fs::path parentPath = fs::path(processedURL).parent_path();
-    for (const auto& entry : fs::directory_iterator(parentPath)) {
-        std::string filename = entry.path().filename().string();
-        if (filename == path + ".txt" || filename == path + ".html") {
-            return entry.path().string();
-        }
+    if (GetFileAttributesA(processedURL.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        return processedURL;
     }
 
-    return ""; // File not found
+    // else, look in the folder above for a txt, html, or other allowed 
+    if (GetFileAttributesA((processedURL+".html").c_str()) != INVALID_FILE_ATTRIBUTES) {
+        return processedURL+".html";
+    }
+    if (GetFileAttributesA((processedURL+".txt").c_str()) != INVALID_FILE_ATTRIBUTES) {
+        return processedURL+".txt";
+    }
+
+    // // File not found but 404 file exists
+    // if (GetFileAttributesA("root\\404.html") != INVALID_FILE_ATTRIBUTES) {
+    //     return "root\\404.html";
+    // }
+
+    // File not found
+    processedURL = "";
+
+    return processedURL;
 
 }

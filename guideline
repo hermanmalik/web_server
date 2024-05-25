@@ -6,7 +6,14 @@ TODO
 - allow to serve more content
 - logging in a text file
 - fix parsing to allow blank URIs
+- better error codes for unsupported http versions (505) and methods (501)
+- test body = "" vs body = NULL for responseToString
+- for GET and HEAD, status should be 403, 404, or 200
 
+SECURITY
+- long URIs, make a limit
+- long request parts generally
+- 
 
 
 

@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+#define ROOT_DIR "root/"
+#define DEBUG 1
+
 // method, URI, version, headers, body
 struct http_request {
     std::string method;
@@ -30,5 +33,8 @@ std::string responseToString(http_response response);
 
 // Validates a http_request and returns 1 if it is valid.
 bool validateRequest(http_request request);
+
+// Takes a URI and returns a filepath
+std::string parseURI(std::string URI);
 
 #endif

@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <iostream>
+#include "request_handler.h"
 #include "parser.h"
 
 
@@ -119,59 +120,25 @@ void __cdecl start_webserver(char const * port)
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
             // Print what was received
-            // TODO: receive more than 512 bytes
-            printf("Bytes received: %d\n", iResult);
-            printf("%s\n", recvbuf);
+            if(DEBUG) printf("Bytes received: %d\n", iResult);
+            if(DEBUG) printf("%s\n", recvbuf);
             http_request request = parseRequest(recvbuf, recvbuflen);
-
-            // Build response
-            std::string status;
-            std::string body;
-            if (validateRequest(request) == 0) {
-                status = "400 Bad Request";
-                body = "<!DOCTYPE html><html lang=\"en\"><body><h1> Invalid Request </h1></body></html>";
-            } else {
-                status = "200 OK";
-                body = "<!DOCTYPE html><html lang=\"en\"><body><h1> Valid Request </h1></body></html>";
-            }
-            std::string version = "HTTP/1.0";
-            std::vector<std::pair<std::string, std::string>> headers = {{"Content-Type", "text/html"},
-                {"Content-Length", std::to_string(body.length())},
-                {"Connection", "keep-alive"}}; // rewrite this line?
-            http_response response = {version, status, headers, body};
-            std::string htmlOutput = responseToString(response);
-            
-            // std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> Generic Response </h1></body></html>";
-            // std::ostringstream ss;
-            // ss << "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-Length: " << htmlFile.size() << "\nConnection: keep-alive\n\n" << htmlFile;
-            // std::string htmlOutput = ss.str();
-            int bytesSent;
-            long totalBytesSent = 0;
-
-            std::cout << htmlOutput << "\n";
-
-            // TODO: loop to send longer output
-            // while (totalBytesSent < htmlOutput.size())
-            // {
-            //     bytesSent = send(ClientSocket, htmlOutput.c_str(), htmlOutput.size(), 0);
-            //     if (bytesSent < 0)
-            //     {
-            //         break;
-            //     }
-            //     totalBytesSent += bytesSent;
-            // }
+            http_response response = handle_request(request);
+            std::string output = responseToString(response);            
 
             // Send back our output 
-            iSendResult = send(ClientSocket, htmlOutput.c_str(), htmlOutput.size(), 0);
+            iSendResult = send(ClientSocket, output.c_str(), output.size(), 0);
+            if(DEBUG) printf("Bytes sent: %d\n", iSendResult);
+            if(DEBUG) std::cout << output << "\n";
 
+            // Check for send error
             if (iSendResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
                 closesocket(ClientSocket);
                 WSACleanup();
                 throw std::exception();
             }
-            printf("Bytes sent: %d\n", iSendResult);
-        } else if (iResult == 0)
+        } else if (iResult == 0) // receiving empty message means to close?
             printf("Connection closing...\n");
         else {
             printf("recv failed: %d\n", WSAGetLastError());
