@@ -2,8 +2,8 @@
 SHELL = /bin/sh
 
 OBJS =  main.o
-CFLAGS = -Wall -g
-CC = gcc
+CFLAGS = -lws2_32 # -Wall -g 
+CC = g++
 
-main: main.cpp
-   $(CC) $(CFLAGS) -o $@
+main: main.cpp src/server.cpp src/parser.cpp src/request_handler.cpp
+   $(CC) $(CFLAGS) -o server

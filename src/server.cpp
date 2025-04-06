@@ -26,6 +26,7 @@
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "80"
+#define BACKLOG 10 // how many pending connections to hold
 
 // Starts a http server on the given port
 void __cdecl start_webserver(char const * port)
@@ -94,13 +95,13 @@ void __cdecl start_webserver(char const * port)
 
     // Now we listen on this IP and port for connection requests (SOMAXCONN is backlog size)
     printf("Listening...\n");
-    if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+    if (listen(ListenSocket, BACKLOG) == SOCKET_ERROR) {
         printf( "Listen failed with error: %ld\n", WSAGetLastError() );
         closesocket(ListenSocket);
         WSACleanup();
         throw std::exception();
     }
-
+    
     // If we get a request, we need to accept it. 
     // We can only accept a single connection with this structure. For more, one technique is to loop the listen function and accept on other threads. 
     printf("Waiting for connection...\n");
@@ -112,6 +113,7 @@ void __cdecl start_webserver(char const * port)
         throw std::exception();
     }
     // (here is where you would pass the accepted client socket to a worker thread)
+    // Windows is CreateThread
     
     // Now we need to send and receive data on the socket.
     // Receive until the peer shuts down the connection
@@ -120,7 +122,7 @@ void __cdecl start_webserver(char const * port)
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0) {
             // Print what was received
-            if(DEBUG) printf("Bytes received: %d\n", iResult);
+            if(DEBUG) printf("\nBytes received: %d\n", iResult);
             if(DEBUG) printf("%s\n", recvbuf);
             http_request request = parseRequest(recvbuf, recvbuflen);
             http_response response = handle_request(request);
@@ -164,3 +166,38 @@ void __cdecl start_webserver(char const * port)
     // need to implement continuing to work after client leaves
 
 }
+
+// implement thread function
+DWORD WINAPI ThreadFunc(LPVOID lpParam) {
+    return 0;
+}
+
+// move this to main code, this is how you create a new thread
+HANDLE CreateThread(
+    LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    SIZE_T dwStackSize,
+    LPTHREAD_START_ROUTINE lpStartAddress,
+    LPVOID lpParameter,
+    DWORD dwCreationFlags,
+    LPDWORD lpThreadId
+);
+
+// lpThreadAttributes: Optional security attributes for the new thread. NULL
+// dwStackSize: The initial size of the stack, in bytes. Use 0 for default size. 0
+// lpStartAddress: Pointer to the thread function. ThreadFunc
+// lpParameter: Pointer to a variable to pass to the thread function. Can be NULL if no parameter is needed. (void *)&(as_threads[i_location].new_fd
+// dwCreationFlags: Flags that control the creation of the thread (e.g., priority). 0
+// lpThreadId: Pointer to a variable that receives the thread identifier. Can be NULL if you don't need it. &dw_thread_id
+
+// CreateThread returns a handle to the newly created thread. You can use this handle to manipulate the thread (e.g., wait for its completion, terminate it, etc.). Make sure to close the handle when its no longer needed to avoid resource leaks:
+
+HANDLE hThread;
+DWORD dwThreadId;
+
+hThread = CreateThread(NULL, 0, ThreadFunc, NULL, 0, &dwThreadId);
+if (hThread == NULL) {
+    // Handle error
+}
+
+// Close the thread handle when it's no longer needed
+CloseHandle(hThread);
